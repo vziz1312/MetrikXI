@@ -40,6 +40,9 @@ def health_check():
     return {"status": "healthy"}
 
 
+
+
+
 @app.get("/players/search")
 def search_players(
     q: str = Query(min_length=1, max_length=100),
@@ -101,7 +104,47 @@ def search_players(
         "count": len(rows),
         "results": [dict(row) for row in rows],
     }
+
+@app.get("/players/{player_id}")
+def get_player_profile(player_id: int):
+
+    connection = sqlite3.connect(DB_PATH)
+    connection.row_factory = sqlite3.Row
+
+    try:
+        player = connection.execute(
+            """
+            SELECT
+                player_id,
+                player_name,
+                date_of_birth,
+                height,
+                citizenship,
+                position,
+                main_position,
+                foot,
+                current_club_name
+            FROM players
+            WHERE player_id = ?
+            """,
+            (player_id,),
+        ).fetchone()
+
+    finally:
+        connection.close()
+
+    if player is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Player not found",
+        )
+
+    return dict(player)
+
+
 @app.get("/players/{player_id}/similar")
+
+
 def get_similar_players(
     player_id: int,
     limit: int = Query(default=10, ge=1, le=50),

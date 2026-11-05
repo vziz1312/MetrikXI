@@ -51,3 +51,21 @@ def test_unknown_player_returns_404():
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Player not found"
+
+def test_player_profile_returns_mbappe():
+    response = client.get("/players/342229")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["player_id"] == 342229
+    assert "Kylian Mbappé" in data["player_name"]
+    assert data["main_position"] == "Attack"
+
+
+def test_unknown_player_profile_returns_404():
+    response = client.get("/players/999999999")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Player not found"
