@@ -1,188 +1,272 @@
-# Football Player Similarity
+# MetrikXI
 
-A Python football analytics and scouting project that compares players
-using statistical profiles. The repository currently contains two related
-but separate prototypes: an API-Football-based similarity application and
-an experimental Transfermarkt-based scouting model.
+### Clarity for every scouting decision.
 
-## Project Workflows
+MetrikXI is a football scouting and player analytics platform in development, designed to help identify, evaluate and compare football players using performance data and statistical similarity.
 
-### 1. API-Football Prototype
+The project combines Python-based scouting models, a SQLite database and a FastAPI backend. An Angular frontend is planned to provide a professional, data-driven recruitment workspace.
 
-The original prototype uses API-Football statistics and a local SQLite
-database.
+---
 
-Main files:
+## Overview
 
-- `main.py` — application entry point for comparing player profiles.
-- `database.py` — database schema, player data access, and per-90 metrics.
-- `similarity.py` — cosine similarity implementation.
-- `collect_data.py` — API-Football data collection.
-- `test_similarity.py` — tests for cosine similarity.
+MetrikXI aims to make football recruitment analysis more structured and accessible.
 
-The prototype uses position-specific statistics. Depending on position,
-these can include goals, assists, shots, passes, key passes, dribbles,
-duels won, and goalkeeper rating. Player vectors are normalized and
-compared using cosine similarity.
+The platform is being developed around six core modules:
 
-The current data-collection code is configured around La Liga
-(competition ID 140), season 2023. The workflow still needs a clearly
-documented, reproducible data-loading process.
+- **Discover** — Search and filter football players.
+- **Player Profiles** — Explore individual player information and performance statistics.
+- **Similar Players** — Discover statistically comparable players.
+- **Compare** — Analyse multiple players side by side.
+- **Shortlists** — Organise potential recruitment targets.
+- **Reports** — Generate structured scouting reports.
 
-### 2. Hybrid Transfermarkt Scouting Model
+## Current Implementation
 
-The experimental model is implemented in `transfermarkt_scouting_hybrid.py`.
+### Backend API
 
-It uses a local `transfermarkt.db` SQLite database containing player
-profiles and performance records.
+The backend is developed with **FastAPI** and connected to a local SQLite database.
 
-The model works as follows:
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | API welcome message |
+| GET | `/health` | Backend health check |
+| GET | `/players/search` | Search players by name |
+| GET | `/players/{player_id}` | Retrieve a player profile |
+| GET | `/players/{player_id}/similar` | Retrieve similar-player recommendations |
 
-1. It searches for a player by name, ignoring differences in capitalization
-   and accents.
-2. It uses the selected recent seasons (`25/26`, `24/25`, and `23/24`)
-   when the target has at least 20 recorded appearances in those seasons.
-3. If the target has fewer than 20 recent appearances, it falls back to
-   career-wide statistics. The target and candidates are then compared
-   using career-wide data.
-4. It requires at least 20 appearances per candidate in recent mode, or
-   100 appearances per player in career-wide mode.
-5. It restricts recommendations to the target's position category.
-6. It calculates goals per appearance and assists per appearance, then
-   adjusts these rates toward the positional baseline to reduce the
-   influence of small samples.
-7. It ranks candidates using a distance-based similarity score.
+The API supports accent-insensitive player searches and returns structured JSON responses.
 
-The sample-size adjustment uses 20 prior appearances:
+### Player Similarity Model
 
-`reliability = appearances / (appearances + 20)`
+The current scouting model is implemented in `transfermarkt_scouting.py`.
 
-The adjusted rates combine a player's observed rates with the positional
-baseline. The target player is excluded from the baseline and from the
-recommendation list.
+It uses player performance records from Transfermarkt data to calculate statistical similarity.
 
-The similarity score is calculated as:
+The current model:
+
+1. Searches for players using normalized names.
+2. Aggregates career performance statistics.
+3. Requires a minimum of 100 appearances by default.
+4. Filters candidates by the target player's main position when available.
+5. Represents players using goals per appearance and assists per appearance.
+6. Calculates Euclidean distance between player profiles.
+7. Converts the distance into a similarity score.
+
+The similarity formula is:
 
 `similarity = 1 / (1 + Euclidean distance)`
 
-A higher score means the two adjusted statistical vectors are closer.
-The score is a ranking measure, **not a probability or a percentage of
-overall playing-style similarity**.
+A higher score indicates that the two statistical profiles are closer.
 
-Main files:
+**Important:** The current model focuses on attacking output. Its similarity score is a ranking measure, not a probability or a complete assessment of playing style.
 
-- `transfermarkt_scouting_hybrid.py` — experimental hybrid model.
-- `test_transfermarkt_scouting_hybrid.py` — unit and integration tests.
-- `import_transfermarkt.py` — Transfermarkt data import utility.
-- `add_appearances.py` — utility for enriching records with appearance data.
+### Experimental Hybrid Model
 
-## Requirements
+The repository also contains an experimental model:
 
-- Python 3.10 or newer recommended.
-- `requests` and `python-dotenv` for the API-Football workflow.
-- `pandas` for the appearance-data utility.
+`transfermarkt_scouting_hybrid.py`
 
-Install the dependencies:
+It explores:
+
+- Recent-season performance analysis.
+- Career-wide statistical fallback.
+- Position-based filtering.
+- Sample-size adjustment.
+- Accent-insensitive player matching.
+
+This model is maintained separately from the career-based model currently connected to FastAPI.
+
+---
+
+## Technology Stack
+
+| Component | Technology |
+|---|---|
+| Frontend (planned) | Angular, TypeScript |
+| Backend | Python, FastAPI |
+| ASGI server | Uvicorn |
+| Database | SQLite |
+| Data processing | Pandas |
+| Automated testing | Pytest |
+| API testing | FastAPI TestClient |
+
+## Project Structure
+
+```text
+MetrikXI/
+│
+├── api.py
+├── transfermarkt_scouting.py
+├── transfermarkt_scouting_hybrid.py
+│
+├── similarity.py
+├── main.py
+├── database.py
+├── collect_data.py
+│
+├── import_transfermarkt.py
+├── add_appearances.py
+│
+├── test_api.py
+├── test_similarity.py
+├── test_transfermarkt_scouting_hybrid.py
+│
+├── requirements.txt
+├── .env.example
+├── .gitignore
+└── README.md
+```
+
+Local SQLite databases and environment files are intentionally excluded from Git.
+
+## Getting Started
+
+### 1. Clone the repository
 
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/vziz1312/MetrikXI.git
+cd MetrikXI
 ```
 
-The hybrid model itself uses Python's standard library, including `sqlite3`.
+### 2. Install dependencies
 
-## Configuration and Data
-
-The API-Football workflow uses an API key stored in a local `.env` file.
-
-The `.env.example` template contains:
-
-```dotenv
-API_KEY=your_api_key_here
-```
-
-Create your local `.env` file by running:
-
-```cmd
-copy .env.example .env
-```
-
-Edit `.env` and replace `your_api_key_here` with your actual API-Football key. Never commit `.env` or publish your API key.
-
-The SQLite databases are local data files and are intentionally excluded
-from Git by the `.gitignore` rules. They are not included in a fresh clone
-of this repository.
-
-Before running a workflow, prepare the corresponding local database and
-ensure that it contains the expected tables and records.
-
-The hybrid model expects `transfermarkt.db` beside
-`transfermarkt_scouting_hybrid.py`, with `players` and `performances`
-tables and a populated `nb_on_pitch` appearance field.
-
-The original application uses `football.db`. Initializing its schema
-is not the same as importing player statistics; the required data must
-also be available before meaningful comparisons can be performed.
-
-## Running the Models
-
-Run the original API-Football prototype after its database has been
-populated:
+Python 3.10 or newer is recommended.
 
 ```bash
-python main.py
+python -m pip install -r requirements.txt
 ```
 
-Run the hybrid Transfermarkt model after preparing `transfermarkt.db`:
+### 3. Prepare the database
+
+The FastAPI backend requires a local `transfermarkt.db` file beside `api.py`.
+
+The database must contain:
+
+- A `players` table with player profile information.
+- A `performances` table containing player performance records.
+- Matching `player_id` fields linking both tables.
+
+The similarity model also requires appearance, goals and assists data.
+
+**Note:** The database is not included in the repository. A compatible local dataset must be prepared separately.
+
+### 4. Start the backend
 
 ```bash
-python transfermarkt_scouting_hybrid.py
+python -m uvicorn api:app --reload
 ```
 
-The hybrid model asks for a player name and prints ranked candidates
-with raw and adjusted goals/assists per appearance.
+The API runs locally at:
 
-## Tests
+`http://127.0.0.1:8000`
 
-Run the cosine similarity tests:
+Interactive API documentation:
+
+`http://127.0.0.1:8000/docs`
+
+### 5. Run automated tests
 
 ```bash
-python test_similarity.py
+python -m pytest -v
 ```
 
-Run the hybrid model tests:
+The current test suite includes:
 
-```bash
-python test_transfermarkt_scouting_hybrid.py
-```
+- API endpoint tests.
+- Player similarity tests.
+- Hybrid scouting model tests.
+- SQLite integration tests.
 
-The hybrid test suite covers name normalization, vector validation,
-sample-size adjustment, recent-season selection, position filtering,
-and career-wide fallback using temporary SQLite databases.
+---
 
-## Current Limitations
+## Design Direction
 
-- The hybrid model uses only goals and assists per appearance. It does not
-  capture the full playing style, tactical role, defensive contribution,
-  passing quality, or off-ball movement of a player.
-- Appearance counts and statistics depend on the completeness and
-  consistency of the available data.
-- The sample-size prior of 20 appearances is a configurable heuristic and
-  has not been empirically optimized.
-- The model has not yet been validated against expert scouting assessments
-  or a formal benchmark.
-- The API-Football and Transfermarkt prototypes are separate workflows and
-  have not yet been consolidated into a single application.
+MetrikXI follows an editorial football intelligence design philosophy.
+
+The interface is intended to resemble professional recruitment software rather than a generic analytics dashboard.
+
+### Visual Identity
+
+| Colour | HEX | Usage |
+|---|---|---|
+| Paper White | `#F3F2ED` | Main background |
+| Ink | `#202830` | Primary text |
+| Pitch Green | `#536B58` | Main accent |
+| Mist | `#D9DED8` | Borders and secondary surfaces |
+| Terracotta | `#A86650` | Secondary highlights |
+| White | `#FFFFFF` | Content panels |
+| Deep Pine | `#142B25` | Sidebar and navigation |
+| Soft Sage | `#DCE7D9` | Subtle highlights |
+
+### Design Principles
+
+- Clean editorial layouts.
+- Restrained colours and consistent spacing.
+- Compact, readable statistical tables.
+- Clear player profiles and analytical sections.
+- Minimal decorative elements.
+- Real data instead of fabricated statistics.
+- Visualisations supported by reliable underlying data.
+
+### Tagline
+
+**Clarity for every scouting decision.**
+
+---
 
 ## Roadmap
 
-- Improve data quality and reproducibility.
-- Evaluate similarity rankings against known players and scouting criteria.
-- Explore richer, position-specific performance features.
-- Consolidate the project structure and remove obsolete experiments safely.
-- Improve installation instructions and the user experience.
+### Backend Development
+- [x] FastAPI application setup.
+- [x] SQLite database integration.
+- [x] Player search endpoint.
+- [x] Player profile endpoint.
+- [x] Similar-player recommendation endpoint.
+- [x] Automated API tests.
+- [ ] Expanded player statistics endpoints.
+- [ ] Improved API validation and error handling.
+
+### Frontend Development
+- [ ] Angular application setup.
+- [ ] MetrikXI design system.
+- [ ] Navigation and dashboard layout.
+- [ ] Player discovery and search interface.
+- [ ] Individual player profiles.
+- [ ] Similar-player recommendations interface.
+- [ ] Player comparison.
+- [ ] Shortlists and scouting reports.
+- [ ] Statistical charts and visualisations.
+
+### Future Improvements
+- [ ] Richer position-specific similarity features.
+- [ ] More detailed seasonal performance analysis.
+- [ ] Advanced player comparison.
+- [ ] Evaluation of recommendations against scouting criteria.
+- [ ] Reliable positional data integration.
+- [ ] Deployment and production preparation.
+
+---
+
+## Current Limitations
+
+- The current career-based similarity model uses only goals and assists per appearance.
+- The recommendation score does not represent overall playing-style similarity.
+- Results depend on the completeness and consistency of the available dataset.
+- The experimental hybrid model and the API-connected model are separate implementations.
+- The Angular frontend has not yet been implemented.
+- Positional heatmaps require positional or tracking data that is not currently available.
+
+---
 
 ## Author
 
-Mohamed Aziz Mghirbi
+**Mohamed Aziz Mghirbi**
 
-GitHub: https://github.com/vziz1312
+GitHub: [@vziz1312](https://github.com/vziz1312)
+
+Repository: [github.com/vziz1312/MetrikXI](https://github.com/vziz1312/MetrikXI)
+
+---
+
+*MetrikXI — Football Intelligence. Measured Precisely.*
